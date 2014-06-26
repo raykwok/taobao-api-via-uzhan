@@ -12,8 +12,11 @@
         "illuminate/support": "4.2.*"
     },
     "autoload": {
+        "classmap": [
+            "src/migrations"
+        ],
         "psr-0": {
-            "Raypower\\TaobaoApiViaUzhan": "src/"
+            "Raypower\\TaobaoApiViaUzhan\\": "src/"
         }
     },
     "minimum-stability": "stable"
