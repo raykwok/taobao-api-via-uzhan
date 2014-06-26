@@ -1,0 +1,20 @@
+{
+    "name": "raypower/taobao-api-via-uzhan",
+    "description": "",
+    "authors": [
+        {
+            "name": "Ray Kwok",
+            "email": "ruizkor@gmail.com"
+        }
+    ],
+    "require": {
+        "php": ">=5.4.0",
+        "illuminate/support": "4.2.*"
+    },
+    "autoload": {
+        "psr-0": {
+            "Raypower\\TaobaoApiViaUzhan": "src/"
+        }
+    },
+    "minimum-stability": "stable"
+}
