@@ -9,6 +9,16 @@ class TaobaoApiViaUzhan
     /**
      * @var
      */
+    public $apiUrl;
+
+    /**
+     * @var
+     */
+    public $password;
+
+    /**
+     * @var
+     */
     public $appkey;
 
     /**
@@ -65,16 +75,20 @@ class TaobaoApiViaUzhan
     public function __construct()
     {
         //api response data format api响应数据格式
-        if (Config::get('taobaoapi::format'))
-            $this->format = Config::get('taobaoapi::format');
+        if (Config::get('taobao-api-via-uzhan::format'))
+            $this->format = Config::get('taobao-api-via-uzhan::format');
 
         //time out for curl
-        if (Config::get('taobaoapi::readTimeout'))
-            $this->readTimeout = Config::get('taobaoapi::readTimeout');
+        if (Config::get('taobao-api-via-uzhan::readTimeout'))
+            $this->readTimeout = Config::get('taobao-api-via-uzhan::readTimeout');
 
         //connection time out for curl
-        if (Config::get('taobaoapi::connectTimeout'))
-            $this->connectTimeout = Config::get('taobaoapi::connectTimeout');
+        if (Config::get('taobao-api-via-uzhan::connectTimeout'))
+            $this->connectTimeout = Config::get('taobao-api-via-uzhan::connectTimeout');
+
+        //password for uzhan
+        if (Config::get('taobao-api-via-uzhan::password'))
+            $this->password = Config::get('taobao-api-via-uzhan::password');
 
         //set rand appkey
         $this->setRandAppkey();
@@ -110,36 +124,25 @@ class TaobaoApiViaUzhan
                 return $result;
             }
         }
-        //组装系统参数
-        $sysParams["app_key"] = $this->appkey;
-        $sysParams["v"] = $this->apiVersion;
-        $sysParams["format"] = $this->format;
-        $sysParams["sign_method"] = $this->signMethod;
-        $sysParams["method"] = $request->getApiMethodName();
-        $sysParams["timestamp"] = date("Y-m-d H:i:s");
-        $sysParams["partner_id"] = $this->sdkVersion;
-        if (null != $session) {
-            $sysParams["session"] = $session;
-        }
+        $result = new stdClass();
 
         //获取业务参数
         $apiParams = $request->getApiParas();
-
-        //签名
-        $sysParams["sign"] = $this->generateSign(array_merge($apiParams, $sysParams));
-
-        //系统参数放入GET请求串
-        $requestUrl = $this->gatewayUrl . "?";
-        foreach ($sysParams as $sysParamKey => $sysParamValue) {
-            $requestUrl .= "$sysParamKey=" . urlencode($sysParamValue) . "&";
+        $apiParams["method"] = $request->getApiMethodName();
+        //appkey
+        $apiParams['appkey'] = $this->appkey;
+        $apiParams['secret_key'] = $this->secretKey;
+        //密码
+        $apiParams["xf_password"] = $this->password;
+        if (null != $session) {
+            $apiParams["session"] = $session;
         }
-        $requestUrl = substr($requestUrl, 0, -1);
 
         //发起HTTP请求
         try {
-            $resp = $this->curl($requestUrl, $apiParams);
+            $resp = $this->curl($this->apiUrl, $apiParams);
         } catch (Exception $e) {
-            $this->logCommunicationError($sysParams["method"], $requestUrl, "HTTP_ERROR_" . $e->getCode(), $e->getMessage());
+            $this->logCommunicationError($apiParams["method"], $this->apiUrl, "HTTP_ERROR_" . $e->getCode(), $e->getMessage());
             $result->code = $e->getCode();
             $result->msg = $e->getMessage();
 
@@ -165,7 +168,7 @@ class TaobaoApiViaUzhan
 
         //返回的HTTP文本不是标准JSON或者XML，记下错误日志
         if (false === $respWellFormed) {
-            $this->logCommunicationError($sysParams["method"], $requestUrl, "HTTP_RESPONSE_NOT_WELL_FORMED", $resp);
+            $this->logCommunicationError($apiParams["method"], $this->apiUrl, "HTTP_RESPONSE_NOT_WELL_FORMED", $resp);
             $result->code = 0;
             $result->msg = "HTTP_RESPONSE_NOT_WELL_FORMED";
 
@@ -174,7 +177,7 @@ class TaobaoApiViaUzhan
 
         //如果TOP返回了错误码，记录到业务错误日志中
         if (isset($respObject->code)) {
-            $this->logCommunicationError($sysParams["method"], $requestUrl, "API_RESPONSE_ERROR", $resp);
+            $this->logCommunicationError($apiParams["method"], $this->apiUrl, "API_RESPONSE_ERROR", $resp);
         }
 
         return $respObject;
@@ -219,17 +222,13 @@ class TaobaoApiViaUzhan
      */
     public function setRandAppkey()
     {
-        $appkeys = Config::get('taobaoapi::appkeys');
+        $appkeys = Config::get('taobao-api-via-uzhan::appkeys');
         $randKey = array_rand($appkeys, 1);
-        $randAppkeyStr = $appkeys[$randKey];
-        $randAppkey = explode(',', $randAppkeyStr);
-        if (isset($randAppkey[0]) && isset($randAppkey[1])) {
-            $this->appkey = $randAppkey[0];
-            $this->secretKey = $randAppkey[1];
-            if (isset($randAppkey[2])) {
-                $this->uSiteKey = $randAppkey[2];
-            }
-        }
+        $randAppkey = $appkeys[$randKey];
+        $this->apiUrl = $randAppkey['apiUrl'];
+        $this->appkey = $randAppkey['appkey'];
+        $this->secretKey = $randAppkey['secretKey'];
+        $this->uSiteKey = $randAppkey['uSiteKey'];
 
         return $this;
     }
@@ -243,22 +242,18 @@ class TaobaoApiViaUzhan
      */
     public function setRandAppkeyByGroup($group)
     {
-        $groupAppkeys = Config::get('taobaoapi::groupAppkeys');
+        $groupAppkeys = Config::get('taobao-api-via-uzhan::groupAppkeys');
         if (!isset($groupAppkeys[$group])) {
             throw new Exception('No available groups!');
         }
 
         $appkeys = $groupAppkeys[$group];
         $randKey = array_rand($appkeys, 1);
-        $randAppkeyStr = $appkeys[$randKey];
-        $randAppkey = explode(',', $randAppkeyStr);
-        if (isset($randAppkey[0]) && isset($randAppkey[1])) {
-            $this->appkey = $randAppkey[0];
-            $this->secretKey = $randAppkey[1];
-            if (isset($randAppkey[2])) {
-                $this->uSiteKey = $randAppkey[2];
-            }
-        }
+        $randAppkey = $appkeys[$randKey];
+        $this->apiUrl = $randAppkey['apiUrl'];
+        $this->appkey = $randAppkey['appkey'];
+        $this->secretKey = $randAppkey['secretKey'];
+        $this->uSiteKey = $randAppkey['uSiteKey'];
 
         return $this;
     }
