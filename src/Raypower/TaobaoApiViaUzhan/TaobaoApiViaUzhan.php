@@ -138,6 +138,11 @@ class TaobaoApiViaUzhan
             $apiParams["session"] = $session;
         }
 
+        //转码
+        foreach($apiParams as $apiParamsK => $apiParamsV){
+            $apiParams[$apiParamsK] = iconv('UTF-8', 'GBK//IGNORE', $apiParamsV);
+        }
+
         //发起HTTP请求
         try {
             $resp = $this->curl($this->apiUrl, $apiParams);
