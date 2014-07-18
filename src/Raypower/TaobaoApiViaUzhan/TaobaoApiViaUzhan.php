@@ -3,6 +3,7 @@
 use stdClass;
 use Config;
 use Exception;
+use Log;
 
 class TaobaoApiViaUzhan
 {
@@ -103,7 +104,12 @@ class TaobaoApiViaUzhan
      */
     protected function logCommunicationError($apiName, $requestUrl, $errorCode, $responseTxt)
     {
-        return;
+        Log::alert('taobao api via uzhanfailed', [
+            'apiName' => $apiName,
+            'requestUrl' => $requestUrl,
+            'errorCode' => $errorCode,
+            'responseTxt' => $responseTxt,
+        ]);
     }
 
     /**
