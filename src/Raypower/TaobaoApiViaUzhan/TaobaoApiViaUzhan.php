@@ -104,7 +104,7 @@ class TaobaoApiViaUzhan
      */
     protected function logCommunicationError($apiName, $requestUrl, $errorCode, $responseTxt)
     {
-        Log::alert('taobao api via uzhanfailed', [
+        Log::alert('taobao api via uzhan failed', [
             'apiName' => $apiName,
             'requestUrl' => $requestUrl,
             'errorCode' => $errorCode,
